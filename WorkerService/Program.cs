@@ -1,21 +1,21 @@
+using DataAccess;
+using Microsoft.EntityFrameworkCore;
 using Quartz;
 using WorkerService;
+using WorkerService.Jobs;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostBuilderContext, services) =>
     {
+        services.AddDbContext<DataContext>(options => options
+            .UseSqlServer(hostBuilderContext.Configuration.GetConnectionString("DefualtConnection")));
+
         services.AddQuartz(q =>
         {
             q.UseMicrosoftDependencyInjectionJobFactory();
 
-            var jobKey = new JobKey("HelloWorldJob");
-
-            q.AddJob<HelloWorldJob>(j => j.WithIdentity(jobKey));
-
-            q.AddTrigger(options => options
-                .ForJob(jobKey)
-                .WithIdentity("HelloWorldJob-trigger")
-                .WithCronSchedule("0/5 * * * * ?"));
+            q.AddJobAndTrigger<HelloWorldJob>(hostBuilderContext.Configuration);
+            q.AddJobAndTrigger<DeleteExpiredCart>(hostBuilderContext.Configuration);
         });
 
         services.AddQuartzHostedService(
